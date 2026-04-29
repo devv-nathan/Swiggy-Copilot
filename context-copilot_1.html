@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Copilot — Swiggy MCP Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #FF6B35;
+    --orange-dim: rgba(255,107,53,0.12);
+    --orange-glow: rgba(255,107,53,0.25);
+    --bg: #0D0D0D;
+    --surface: #141414;
+    --surface2: #1C1C1C;
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text: #F0EDE8;
+    --muted: rgba(240,237,232,0.45);
+    --dimmer: rgba(240,237,232,0.22);
+    --green: #22C55E;
+    --green-dim: rgba(34,197,94,0.12);
+    --amber: #F59E0B;
+    --amber-dim: rgba(245,158,11,0.12);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* Grid lines bg */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 56px;
+    background: rgba(13,13,13,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--orange);
+    box-shadow: 0 0 8px var(--orange-glow);
+  }
+
+  .nav-tag {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 24px 60px;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--orange);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    padding: 6px 14px;
+    border: 1px solid var(--orange-dim);
+    border-radius: 20px;
+    background: var(--orange-dim);
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .hero-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(48px, 8vw, 88px);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.25s;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--orange);
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 48px;
+    font-weight: 300;
+    line-height: 1.6;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.4s;
+  }
+
+  .hero-cta {
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 0.55s;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: var(--orange);
+    color: #0D0D0D;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  .cta-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .cta-btn:active { transform: scale(0.98); }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--dimmer);
+    letter-spacing: 0.08em;
+    opacity: 0;
+    animation: fadeUp 0.7s ease forwards 1s;
+  }
+
+  /* ─── DEMO SECTION ─── */
+  .demo-section {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--orange);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .demo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .demo-topbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #FF5F57; }
+  .dot-y { background: #FEBC2E; }
+  .dot-g { background: #28C840; }
+
+  .topbar-url {
+    margin-left: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--dimmer);
+  }
+
+  .demo-inner { padding: 24px; }
+
+  .demo-prompt-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .demo-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .demo-input:focus { border-color: var(--orange); }
+  .demo-input::placeholder { color: var(--dimmer); }
+
+  .parse-btn {
+    padding: 12px 20px;
+    background: var(--orange);
+    color: #0D0D0D;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.15s;
+    min-width: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .parse-btn:hover { opacity: 0.88; }
+  .parse-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Constraint tags */
+  .constraints-area { margin-bottom: 20px; min-height: 32px; }
+  .c-label { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .tags-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ctag {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .ctag.show { opacity: 1; transform: translateY(0); }
+  .ctag-time  { background: #1e1630; color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+  .ctag-budget{ background: #0f2318; color: #4ade80; border: 1px solid rgba(74,222,128,0.2); }
+  .ctag-diet  { background: #2a1010; color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+  .ctag-macro { background: #221708; color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+  .ctag-hist  { background: #141414; color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
+
+  /* Results */
+  .results-area { display: none; }
+  .results-area.show { display: block; }
+  .r-label {
+    font-size: 11px; color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 10px;
+  }
+
+  .result-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.4s, transform 0.4s, border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .result-item.show { opacity: 1; transform: translateY(0); }
+  .result-item.top-pick { border-color: rgba(255,107,53,0.35); }
+  .result-item:hover { border-color: var(--border-strong); }
+
+  .ri-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .ri-rank { font-size: 11px; color: var(--dimmer); font-family: 'DM Mono', monospace; margin-right: 6px; }
+  .ri-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .ri-price { font-size: 14px; color: var(--text); font-family: 'DM Mono', monospace; }
+  .ri-meta { font-size: 12px; color: var(--muted); display: flex; gap: 12px; margin-bottom: 6px; }
+  .ri-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+  .ribadge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-family: 'DM Mono', monospace;
+  }
+  .ribadge-g { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.15); }
+  .ribadge-a { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.15); }
+  .ribadge-o { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,107,53,0.15); }
+
+  /* ETA callout */
+  .eta-callout {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--green);
+    font-family: 'DM Mono', monospace;
+  }
+  .eta-callout.show { display: flex; }
+  .eta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+  /* Order CTA */
+  .order-cta {
+    display: none;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .order-cta.show { display: flex; }
+  .btn-order {
+    flex: 1;
+    padding: 11px 0;
+    background: var(--orange);
+    color: #0D0D0D;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-order:hover { opacity: 0.88; }
+  .btn-alt {
+    padding: 11px 18px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-alt:hover { background: var(--surface2); }
+
+  /* Loading spinner */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(13,13,13,0.3);
+    border-top-color: #0D0D0D;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error */
+  .error-msg {
+    display: none;
+    font-size: 12px;
+    color: #f87171;
+    font-family: 'DM Mono', monospace;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 6px;
+  }
+  .error-msg.show { display: block; }
+
+  /* ─── HOW IT WORKS ─── */
+  .how-section {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  .how-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    margin-bottom: 32px;
+    opacity: 0;
+  }
+  .how-title.vis { animation: fadeUp 0.6s ease forwards; }
+
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+
+  .step-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .step-card.vis { opacity: 1; transform: translateY(0); }
+
+  .step-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--orange);
+    margin-bottom: 10px;
+  }
+  .step-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .step-api {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--dimmer);
+    line-height: 1.5;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--dimmer);
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Suggestions */
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .sug-btn {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 5px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border-strong);
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .sug-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+  @media (max-width: 600px) {
+    nav { padding: 0 16px; }
+    .hero { padding: 80px 16px 60px; }
+    .hero-title { font-size: 40px; }
+    .input-row { flex-direction: column; }
+    footer { flex-direction: column; gap: 8px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="logo-dot"></div>
+    context-copilot
+  </a>
+  <span class="nav-tag">swiggy MCP · demo</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    ◉ &nbsp;Built on Swiggy MCP Platform
+  </div>
+  <h1 class="hero-title">
+    One sentence.<br><em>One tap.</em>
+  </h1>
+  <p class="hero-sub">
+    Type what you need in plain English. Context Copilot parses every constraint — time, budget, diet, history — and surfaces a ranked shortlist. No browsing.
+  </p>
+  <div class="hero-cta">
+    <a href="#demo" class="cta-btn">Try the live demo ↓</a>
+  </div>
+  <div class="scroll-hint">scroll to demo</div>
+</section>
+
+<!-- LIVE DEMO -->
+<section class="demo-section" id="demo">
+  <p class="section-label">// live demo</p>
+
+  <div class="demo-card">
+    <div class="demo-topbar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="topbar-url">context-copilot.app/order</span>
+    </div>
+    <div class="demo-inner">
+      <p class="demo-prompt-label">// what do you need?</p>
+
+      <div class="suggestions">
+        <button class="sug-btn" onclick="fillInput('20 mins, under ₹250, high protein, no paneer')">20 min, ₹250, high protein, no paneer</button>
+        <button class="sug-btn" onclick="fillInput('something light before my 3pm meeting, under ₹180')">light, before 3pm meeting, ₹180</button>
+        <button class="sug-btn" onclick="fillInput('post gym meal, high protein, no dairy, under ₹350, fast delivery')">post-gym, high protein, no dairy</button>
+      </div>
+
+      <div class="input-row">
+        <input
+          class="demo-input"
+          id="userInput"
+          type="text"
+          placeholder="e.g. 20 mins, under ₹250, high protein, no paneer…"
+          maxlength="200"
+        />
+        <button class="parse-btn" id="parseBtn" onclick="runParse()">
+          <span id="btnText">Parse</span>
+        </button>
+      </div>
+
+      <div class="error-msg" id="errorMsg"></div>
+
+      <div class="constraints-area" id="constraintsArea" style="display:none">
+        <p class="c-label">// extracted constraints</p>
+        <div class="tags-row" id="tagsRow"></div>
+      </div>
+
+      <div class="results-area" id="resultsArea">
+        <p class="r-label" id="resultsLabel"></p>
+        <div id="resultsList"></div>
+        <div class="eta-callout" id="etaCallout">
+          <div class="eta-dot"></div>
+          <span id="etaText"></span>
+        </div>
+        <div class="order-cta" id="orderCta">
+          <button class="btn-order" onclick="alert('In a real integration, this calls update_food_cart → place_food_order on Swiggy\'s MCP API.')">
+            Place order via Swiggy MCP
+          </button>
+          <button class="btn-alt">See more</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <p class="section-label">// architecture</p>
+  <h2 class="how-title" id="howTitle">How it works</h2>
+  <div class="steps">
+    <div class="step-card" id="s1">
+      <div class="step-num">01 →</div>
+      <div class="step-name">Parse intent</div>
+      <div class="step-api">Claude extracts constraints into structured JSON</div>
+    </div>
+    <div class="step-card" id="s2">
+      <div class="step-num">02 →</div>
+      <div class="step-name">Search & filter</div>
+      <div class="step-api">search_restaurants<br>search_menu</div>
+    </div>
+    <div class="step-card" id="s3">
+      <div class="step-num">03 →</div>
+      <div class="step-name">Rank results</div>
+      <div class="step-api">LLM scores by ETA × budget × macros × history</div>
+    </div>
+    <div class="step-card" id="s4">
+      <div class="step-num">04 →</div>
+      <div class="step-name">One-tap order</div>
+      <div class="step-api">update_food_cart<br>place_food_order</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>context-copilot · swiggy builders club</span>
+  <span>powered by claude + swiggy MCP</span>
+</footer>
+
+<script>
+function fillInput(text) {
+  document.getElementById('userInput').value = text;
+  document.getElementById('userInput').focus();
+}
+
+const TAG_TYPES = {
+  deadline: 'ctag-time',
+  budget: 'ctag-budget',
+  dietary_exclusions: 'ctag-diet',
+  macros: 'ctag-macro',
+  history: 'ctag-hist',
+  cuisine: 'ctag-hist',
+  other: 'ctag-hist'
+};
+
+function tagLabel(key, value) {
+  if (key === 'deadline') return `ETA ≤ ${value}`;
+  if (key === 'budget') return `≤ ₹${value}`;
+  if (key === 'dietary_exclusions') return Array.isArray(value) ? value.map(v => `no ${v}`).join(', ') : `no ${value}`;
+  if (key === 'macros') return Array.isArray(value) ? value.join(', ') : value;
+  if (key === 'history') return value === true ? 'similar to past orders' : value;
+  if (key === 'cuisine') return value;
+  return value;
+}
+
+const HARDCODED = {
+  constraints: {
+    deadline: '20 mins',
+    budget: 250,
+    dietary_exclusions: ['paneer'],
+    macros: ['high protein'],
+    history: true
+  },
+  results: [
+    {
+      rank: 1,
+      name: 'Chicken Egg Bowl',
+      restaurant: 'FreshBox Kitchen',
+      price: 229,
+      eta_min: 16,
+      protein_g: 32,
+      badges: ['similar to last order', 'high protein'],
+      badge_types: ['g', 'g'],
+      top: true
+    },
+    {
+      rank: 2,
+      name: 'Grilled Chicken Wrap',
+      restaurant: 'WrapCity',
+      price: 199,
+      eta_min: 18,
+      protein_g: 28,
+      badges: ['paneer-free confirmed'],
+      badge_types: ['g'],
+      top: false
+    },
+    {
+      rank: 3,
+      name: 'Dal Makhani + Roti',
+      restaurant: 'Homely Bites',
+      price: 245,
+      eta_min: 19,
+      protein_g: 22,
+      badges: ['contains paneer variant — opted out'],
+      badge_types: ['a'],
+      top: false
+    }
+  ],
+  eta_message: 'Order #1 now → arrives at 12:44 — 16 min before your 1:00 PM meeting'
+};
+
+async function runParse() {
+  const input = document.getElementById('userInput').value.trim();
+  if (!input) return;
+
+  const btn = document.getElementById('parseBtn');
+  const btnText = document.getElementById('btnText');
+  const errorMsg = document.getElementById('errorMsg');
+
+  btn.disabled = true;
+  btnText.innerHTML = '<div class="spinner"></div>';
+  errorMsg.classList.remove('show');
+
+  document.getElementById('constraintsArea').style.display = 'none';
+  document.getElementById('resultsArea').classList.remove('show');
+  document.getElementById('tagsRow').innerHTML = '';
+  document.getElementById('resultsList').innerHTML = '';
+  document.getElementById('etaCallout').classList.remove('show');
+  document.getElementById('orderCta').classList.remove('show');
+
+  // Simulate parsing delay for realism
+  await new Promise(r => setTimeout(r, 900));
+
+  btn.disabled = false;
+  btnText.textContent = 'Parse';
+
+  renderConstraints(HARDCODED.constraints);
+  renderResults(HARDCODED.results, HARDCODED.eta_message);
+}
+
+function renderConstraints(constraints) {
+  const area = document.getElementById('constraintsArea');
+  const row = document.getElementById('tagsRow');
+  area.style.display = 'block';
+  row.innerHTML = '';
+
+  let delay = 0;
+  for (const [key, value] of Object.entries(constraints)) {
+    if (!value || (Array.isArray(value) && value.length === 0)) continue;
+
+    const span = document.createElement('span');
+    const cls = TAG_TYPES[key] || 'ctag-hist';
+    span.className = `ctag ${cls}`;
+    span.textContent = tagLabel(key, value);
+    row.appendChild(span);
+
+    setTimeout(() => span.classList.add('show'), delay);
+    delay += 80;
+  }
+}
+
+function renderResults(results, etaMessage) {
+  const area = document.getElementById('resultsArea');
+  const list = document.getElementById('resultsList');
+  const label = document.getElementById('resultsLabel');
+
+  area.classList.add('show');
+  label.textContent = `// ${results.length} matches ranked`;
+
+  results.forEach((r, i) => {
+    const item = document.createElement('div');
+    item.className = `result-item${r.top ? ' top-pick' : ''}`;
+
+    const badges = (r.badges || []).map((b, bi) => {
+      const t = (r.badge_types || [])[bi] || 'g';
+      return `<span class="ribadge ribadge-${t}">${b}</span>`;
+    }).join('');
+
+    item.innerHTML = `
+      <div class="ri-head">
+        <div><span class="ri-rank">#${r.rank}</span><span class="ri-name">${r.name}</span></div>
+        <span class="ri-price">₹${r.price}</span>
+      </div>
+      <div class="ri-meta">
+        <span>${r.restaurant}</span>
+        <span>${r.eta_min} min delivery</span>
+        ${r.protein_g ? `<span>${r.protein_g}g protein</span>` : ''}
+      </div>
+      <div class="ri-badges">${badges}</div>
+    `;
+    list.appendChild(item);
+    setTimeout(() => item.classList.add('show'), 100 + i * 120);
+  });
+
+  if (etaMessage) {
+    setTimeout(() => {
+      document.getElementById('etaText').textContent = etaMessage;
+      document.getElementById('etaCallout').classList.add('show');
+    }, 500);
+  }
+
+  setTimeout(() => {
+    document.getElementById('orderCta').classList.add('show');
+  }, 700);
+}
+
+// Intersection observer for how-it-works animations
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('vis');
+    }
+  });
+}, { threshold: 0.15 });
+
+['howTitle','s1','s2','s3','s4'].forEach((id, i) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.style.transitionDelay = `${i * 80}ms`;
+    obs.observe(el);
+  }
+});
+
+document.getElementById('userInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runParse();
+});
+</script>
+
+</body>
+</html>
